@@ -1,0 +1,6 @@
+2026-11-22 04:10:37,498 [WARNING] [pc03] conexão perdida: [Errno 32] Broken pipe
+2026-11-22 04:10:37,498 [INFO] [pc03] reconectando em 1.2s
+2026-11-22 04:10:38,649 [INFO] [pc03] coletor descoberto em 172.28.10.10:5000 (resposta de 172.28.10.10)
+2026-11-22 04:10:38,649 [INFO] [pc03] conectando a 172.28.10.10:5000 ...
+2026-11-22 04:10:38,652 [INFO] [pc03] canal TLS estabelecido (TLSv1.3, TLS_AES_256_GCM_SHA384)
+2026-11-22 04:10:38,653 [INFO] [pc03] conectado e autenticado (protocolo v1)

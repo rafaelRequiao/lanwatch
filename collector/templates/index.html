@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LANWatch — Painel</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --txt:#e6e8ee; --dim:#8b93a5;
+          --ok:#3ecf8e; --warn:#f5a524; --bad:#f2555a; --acc:#5b8def; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.4 system-ui, sans-serif; background:var(--bg); color:var(--txt); }
+  header { display:flex; align-items:baseline; gap:16px; padding:18px 28px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:22px; letter-spacing:.5px; }
+  header .sub { color:var(--dim); }
+  header .clock { margin-left:auto; color:var(--dim); font-variant-numeric:tabular-nums; }
+  main { display:grid; grid-template-columns: 1fr 340px; gap:24px; padding:24px 28px; }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:16px; align-content:start; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .card.off { opacity:.55; border-color:var(--bad); }
+  .top { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--ok); }
+  .off .dot { background:var(--bad); }
+  .name { font-weight:600; font-size:17px; }
+  .addr { color:var(--dim); font-size:12px; margin-left:auto; }
+  .row { display:grid; grid-template-columns:52px 1fr 54px; align-items:center; gap:8px; margin:5px 0; font-size:13px; }
+  .bar { height:8px; background:#232733; border-radius:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--acc); }
+  .bar i.warn { background:var(--warn); } .bar i.bad { background:var(--bad); }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .rtt { display:flex; justify-content:space-between; margin-top:10px; font-size:13px; color:var(--dim); }
+  .rtt b { color:var(--txt); font-variant-numeric:tabular-nums; }
+  .rtt b.bad { color:var(--bad); }
+  canvas { width:100%; height:42px; margin-top:6px; display:block; }
+  aside h2 { font-size:15px; margin:0 0 10px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+  .alert { border-left:3px solid var(--bad); background:var(--card); padding:8px 10px; margin-bottom:8px; border-radius:4px; font-size:13px; }
+  .alert.RESOLVIDO { border-color:var(--ok); }
+  .alert small { color:var(--dim); display:block; }
+  .empty { color:var(--dim); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>LANWatch</h1><span class="sub">Arena — estado dos PCs em tempo real</span>
+  <span class="clock" id="summary"></span>
+</header>
+<main>
+  <section id="grid"><p class="empty">Aguardando agentes…</p></section>
+  <aside><h2>Alertas</h2><div id="alerts"><p class="empty">Nenhum alerta.</p></div></aside>
+</main>
+<script>
+// O painel não fala com os agentes: ele só consulta a API HTTP do coletor (fetch) a cada 2 s.
+const cls = v => v > 90 ? "bad" : v > 75 ? "warn" : "";
+const fmtTime = t => new Date(t * 1000).toLocaleTimeString("pt-BR");
+
+function spark(canvas, values, color, max) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const g = canvas.getContext("2d"); g.scale(dpr, dpr);
+  if (values.length < 2) return;
+  const top = Math.max(max, ...values);
+  g.strokeStyle = color; g.lineWidth = 1.5; g.beginPath();
+  values.forEach((v, i) => {
+    const x = i / (values.length - 1) * w, y = h - (v / top) * (h - 4) - 2;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.stroke();
+}
+
+function card(h) {
+  const m = h.last || {}, off = !h.online;
+  const row = (label, v) => `<div class="row"><span>${label}</span>
+      <div class="bar"><i class="${cls(v)}" style="width:${v ?? 0}%"></i></div>
+      <span class="num">${v == null ? "–" : v.toFixed(1) + "%"}</span></div>`;
+  return `<div class="card ${off ? "off" : ""}" id="c-${h.host}">
+    <div class="top"><span class="dot"></span><span class="name">${h.host}</span>
+      <span class="addr">${off ? "OFFLINE desde " + fmtTime(h.last_seen) : h.addr}</span></div>
+    ${row("CPU", m.cpu)}${row("RAM", m.mem)}${row("Disco", m.disk)}
+    <div class="rtt"><span>Latência até o servidor</span>
+      <b class="${m.rtt_ms > 50 ? "bad" : ""}">${m.rtt_ms == null ? "–" : m.rtt_ms.toFixed(1) + " ms"}</b></div>
+    <canvas id="s-${h.host}" title="latência (últimos 5 min)"></canvas></div>`;
+}
+
+async function refresh() {
+  try {
+    const [hs, al] = await Promise.all([fetch("/api/hosts"), fetch("/api/alerts")]);
+    const { hosts } = await hs.json(), alerts = await al.json();
+    const list = Object.entries(hosts).map(([host, s]) => ({ host, ...s }))
+                       .sort((a, b) => a.host.localeCompare(b.host));
+    const online = list.filter(h => h.online).length;
+    document.getElementById("summary").textContent =
+      `${online}/${list.length} online · ${new Date().toLocaleTimeString("pt-BR")}`;
+    document.getElementById("grid").innerHTML = list.length ? list.map(card).join("")
+      : '<p class="empty">Aguardando agentes…</p>';
+    document.getElementById("alerts").innerHTML = alerts.length ? alerts.map(a =>
+      `<div class="alert ${a.level}"><b>${a.host}</b> — ${a.text}
+       <small>${a.level} · ${fmtTime(a.ts)}</small></div>`).join("")
+      : '<p class="empty">Nenhum alerta.</p>';
+    for (const h of list) {
+      const r = await fetch(`/api/history/${h.host}?minutes=5`);
+      const pts = await r.json();
+      spark(document.getElementById("s-" + h.host), pts.map(p => p.rtt_ms ?? 0), "#5b8def", 5);
+    }
+  } catch (e) {
+    document.getElementById("summary").textContent = "sem conexão com o coletor";
+  }
+}
+refresh(); setInterval(refresh, 2000);
+</script>
+</body>
+</html>

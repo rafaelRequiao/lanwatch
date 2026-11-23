@@ -1,0 +1,4 @@
+2026-11-21 03:01:36,483 [WARNING] [agent-pc02] ALERTA [CRÍTICO] pc02: Latência acima de 50 ms: 121.9 ms
+2026-11-21 03:01:36,487 [INFO] [mailer] e-mail de alerta enviado para admin@lanhouse.local (pc02)
+2026-11-21 03:01:44,791 [WARNING] [agent-pc02] ALERTA [RESOLVIDO] pc02: rtt_ms normalizado: 1.2
+2026-11-21 03:01:44,795 [INFO] [mailer] e-mail de alerta enviado para admin@lanhouse.local (pc02)

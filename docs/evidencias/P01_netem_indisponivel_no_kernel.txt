@@ -1,0 +1,7 @@
+$ docker exec -u root pc02 tc qdisc add dev eth0 root netem delay 80ms 10ms loss 2%
+Error: Specified qdisc kind is unknown.
+qdisc noqueue 0: root refcnt 2 
+
+$ docker exec pc02 ping -c 4 collector
+4 packets transmitted, 4 received, 0% packet loss, time 3074ms
+rtt min/avg/max/mdev = 0.048/0.058/0.063/0.006 ms

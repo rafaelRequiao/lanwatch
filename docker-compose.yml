@@ -1,0 +1,101 @@
+# LANWatch — ambiente completo
+# 1 coletor (TCP+TLS :5000, painel HTTP :8080) + 3 agentes (PCs simulados)
+# + Mailpit (servidor SMTP de teste, caixa de entrada web em :8025)
+name: lanwatch
+
+networks:
+  lan:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+          gateway: 172.28.10.1
+
+volumes:
+  collector-data:   # banco SQLite + logs
+  certs:            # certificado TLS gerado pelo coletor (agentes montam só leitura)
+
+x-agent: &agent
+  build: { context: ., dockerfile: agent/Dockerfile }
+  image: lanwatch-agent
+  restart: unless-stopped
+  depends_on: [collector]
+  cap_add: [NET_ADMIN]            # necessário só para simular perda/atraso com tc netem
+  volumes:
+    - certs:/certs:ro
+  environment: &agent-env
+    COLLECTOR_HOST: auto          # descobre o coletor por multicast UDP 239.255.10.10:50000
+    COLLECTOR_PORT: "5000"
+    AGENT_TOKEN: ${AGENT_TOKEN:?defina AGENT_TOKEN no .env}
+    TLS_CA: /certs/collector.crt
+    INTERVAL: "2"
+
+services:
+  collector:
+    build: { context: ., dockerfile: collector/Dockerfile }
+    image: lanwatch-collector
+    container_name: collector
+    hostname: collector
+    restart: unless-stopped
+    environment:
+      AGENT_TOKEN: ${AGENT_TOKEN:?defina AGENT_TOKEN no .env}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      ALERT_TO: admin@lanhouse.local
+      ALERT_RTT_MS: "50"
+    ports:
+      - "15000:5000"               # ingestão: PCs reais (fora do Docker) também podem enviar
+      - "8080:8080"               # painel web
+    volumes:
+      - collector-data:/data
+      - certs:/certs
+    networks:
+      lan: { ipv4_address: 172.28.10.10 }
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    hostname: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"               # caixa de entrada web dos alertas
+    networks:
+      lan: { ipv4_address: 172.28.10.30 }
+
+  netsim:                         # "rede ruim" entre pc02 e o coletor (falha provocada)
+    build: { context: ., dockerfile: netsim/Dockerfile }
+    image: lanwatch-netsim
+    container_name: netsim
+    hostname: netsim
+    restart: unless-stopped
+    environment:
+      TARGET_HOST: collector
+      TARGET_PORT: "5000"
+    networks:
+      lan: { ipv4_address: 172.28.10.40 }
+
+  pc01:
+    <<: *agent
+    container_name: pc01
+    hostname: pc01
+    environment: { <<: *agent-env, AGENT_NAME: pc01 }
+    networks:
+      lan: { ipv4_address: 172.28.10.21 }
+
+  pc02:
+    <<: *agent
+    container_name: pc02
+    hostname: pc02
+    depends_on: [collector, netsim]
+    # pc02 fala com o coletor ATRAVÉS do netsim; o nome conferido no certificado continua "collector"
+    environment: { <<: *agent-env, AGENT_NAME: pc02, COLLECTOR_HOST: netsim, TLS_SERVER_NAME: collector }
+    networks:
+      lan: { ipv4_address: 172.28.10.22 }
+
+  pc03:
+    <<: *agent
+    container_name: pc03
+    hostname: pc03
+    environment: { <<: *agent-env, AGENT_NAME: pc03 }
+    networks:
+      lan: { ipv4_address: 172.28.10.23 }

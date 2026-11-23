@@ -1,0 +1,18 @@
+## agente fora do Docker (PC real) com o certificado do coletor
+2026-11-21 03:03:45,072 [INFO] [pc-real] conectando a 127.0.0.1:5000 ...
+2026-11-21 03:03:45,079 [INFO] [pc-real] canal TLS estabelecido (TLSv1.3, TLS_AES_256_GCM_SHA384)
+2026-11-21 03:03:45,121 [INFO] [pc-real] conectado e autenticado (protocolo v1)
+2026-11-21 03:03:45,123 [INFO] [pc-real] enviado cpu=0.0% mem=7.5% rtt=0.51ms
+
+## agente com certificado falso
+2026-11-21 03:03:50,082 [INFO] [pc-real] conectando a 127.0.0.1:5000 ...
+2026-11-21 03:03:50,088 [ERROR] [pc-real] certificado do coletor NÃO confere: self-signed certificate
+
+## tcpdump depois do TLS (ilegível)
+03:03:54.907781 IP 172.28.10.21.59778 > 172.28.10.10.5000: Flags [P.], seq 3345653654:3345653710, ack 32948190
+E..lL.@.@.....
+...
+
+.....j...b.....Jl......
+..~.x-......3..~F1'aV.L...s
+eHN2.G...?.&^D..L...&.w..S.QGB....G.
