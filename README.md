@@ -14,7 +14,6 @@ Cada PC roda um **agente Python** (psutil) que envia CPU, memória, disco, rede 
 | Ingestão dos agentes (TCP + TLS) | `localhost:5000` |
 | Descoberta do coletor (UDP multicast) | grupo `239.255.10.10:50000` (só dentro da rede do Docker) |
 
-Arquitetura, plano de rede e testes: [`docs/CHECKPOINT1.md`](docs/CHECKPOINT1.md) · conteúdos da disciplina × projeto: [`docs/MAPA_CONTEUDOS.md`](docs/MAPA_CONTEUDOS.md) · roteiro do vídeo: [`docs/ROTEIRO_VIDEO.md`](docs/ROTEIRO_VIDEO.md)
 
 ## Estrutura
 
