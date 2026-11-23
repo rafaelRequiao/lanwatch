@@ -14,6 +14,7 @@ Cada PC roda um **agente Python** (psutil) que envia CPU, memória, disco, rede 
 | Ingestão dos agentes (TCP + TLS) | `localhost:5000` |
 | Descoberta do coletor (UDP multicast) | grupo `239.255.10.10:50000` (só dentro da rede do Docker) |
 
+Arquitetura, plano de rede, protocolos e testes: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md)
 
 ## Estrutura
 
@@ -30,7 +31,7 @@ lanwatch/
 ├── netsim/netsim.py        # proxy TCP que simula rede ruim (atraso) para a falha provocada
 ├── docker-compose.yml      # rede 172.28.10.0/24: coletor, 3 agentes, mailpit, netsim
 ├── .env.example            # token compartilhado
-└── docs/                   # checkpoint, evidências dos testes
+└── docs/                   # arquitetura e evidências dos testes
 ```
 
 ## Requisitos
